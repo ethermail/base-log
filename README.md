@@ -16,3 +16,4 @@ Block explorers are your production logs
 Always separate “read model” from “write model”
 Determinism beats cleverness
 Public goods: documentation is part of the product
+Security posture: assume approvals will be abused
