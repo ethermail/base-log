@@ -7,3 +7,4 @@ Invariants > features: keep state transitions boring.
  Wallet UX: assume users will refresh at the worst time
   Indexers lag; contracts don’t
  ABI is the contract; UI is a view
+Gas is a tax on complexity; pay only for value
