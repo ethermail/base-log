@@ -12,3 +12,4 @@ Events are an API: version them carefully
 Consider replay protection on cross-domain messages
  Optimize for debuggability: emit reasons, not mysteries
   Failure modes: revert, stuck pending, partial state, stale cache
+Block explorers are your production logs
