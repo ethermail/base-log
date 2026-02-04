@@ -4,3 +4,4 @@
 - Invariants > features: keep state transitions boring.
 	- Every tx is a log entry; design for observability.
 	- Prefer idempotent flows; retries should be safe.
+- Wallet UX: assume users will refresh at the worst time
