@@ -1,2 +1,2 @@
 # base-log
- Learning Base ecosystem.
+	> Build on Base: ship fast, verify on-chain
