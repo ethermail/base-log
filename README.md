@@ -10,3 +10,5 @@ Invariants > features: keep state transitions boring
 Gas is a tax on complexity; pay only for value
 Events are an API: version them carefully
 Consider replay protection on cross-domain messages
+ Optimize for debuggability: emit reasons, not mysteries
+ 
