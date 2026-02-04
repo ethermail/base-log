@@ -29,8 +29,8 @@ contract BaseNote {
         return bytes(note).length;
     }
 
-    /// @notice Returns true if a non-empty note is set.
-    function hasNote() external view returns (bool) {
-        return bytes(note).length != 0;
+    /// @notice Returns true if no note is set.
+    function isEmpty() external view returns (bool) {
+        return bytes(note).length == 0;
     }
 }
