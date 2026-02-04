@@ -21,4 +21,9 @@ contract BaseNote {
     function noteLength() external view returns (uint256) {
         return bytes(note).length;
     }
+
+    /// @notice Checks whether a note is currently set
+    function hasNote() external view returns (bool) {
+        return bytes(note).length > 0;
+    }
 }
