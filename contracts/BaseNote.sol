@@ -16,4 +16,9 @@ contract BaseNote {
         note = n;
         emit NoteUpdated(msg.sender, n);
     }
+
+    /// @notice Returns the length of the current note
+    function noteLength() external view returns (uint256) {
+        return bytes(note).length;
+    }
 }
