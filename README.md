@@ -15,3 +15,4 @@ Consider replay protection on cross-domain messages
 Block explorers are your production logs
 Always separate “read model” from “write model”
 Determinism beats cleverness
+Public goods: documentation is part of the product
