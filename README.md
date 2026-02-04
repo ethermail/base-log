@@ -18,3 +18,4 @@ Determinism beats cleverness
 Public goods: documentation is part of the product
 Security posture: assume approvals will be abused
 Use smallest surface area contracts; push logic off-chain when safe
+Prefer pull payments; avoid push with external calls
