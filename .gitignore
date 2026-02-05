@@ -1,1 +1,11 @@
 .DS_Store
+
+# Next.js (nested app)
+base-note-dapp/node_modules/
+base-note-dapp/.next/
+base-note-dapp/out/
+base-note-dapp/.env*
+
+# VS Code workspace files
+*.code-workspace
+.vscode/
