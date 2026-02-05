@@ -13,6 +13,11 @@ pragma solidity ^0.8.20;
 /// - The stored note length is always <= MAX_NOTE_LENGTH
 /// - The contract stores at most one note at any time
 /// - Updating the note always emits a NoteUpdated event
+/// @custom:assumptions
+/// - The EVM executes according to the chain's protocol (no consensus/client faults).
+/// - Anyone can call setNote; off-chain systems must not assume an authorized updater.
+/// - Note length is measured in bytes (bytes(note).length), not human-visible characters.
+/// - Off-chain consumers are responsible for indexing/reading NoteUpdated events.
 contract BaseNote {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
