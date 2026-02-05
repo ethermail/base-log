@@ -5,9 +5,26 @@ import { getWriteContract } from "../lib/contract";
 
 const MAX_NOTE_BYTES = 280;
 const LS_KEY = "base_note_account";
+const EXPECTED_CHAIN_ID = 84532; // Base Sepolia
+
+type EthLike = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  on?: (event: string, handler: (...args: any[]) => void) => void;
+  removeListener?: (event: string, handler: (...args: any[]) => void) => void;
+};
 
 function byteLength(str: string) {
   return new TextEncoder().encode(str).length;
+}
+
+function parseChainId(hexOrNum: unknown): number | null {
+  if (typeof hexOrNum === "number") return hexOrNum;
+  if (typeof hexOrNum === "string") {
+    if (hexOrNum.startsWith("0x")) return parseInt(hexOrNum, 16);
+    const n = Number(hexOrNum);
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
 
 export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
@@ -16,10 +33,16 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState("");
   const [account, setAccount] = useState("");
+  const [chainId, setChainId] = useState<number | null>(null);
 
   const used = useMemo(() => byteLength(value), [value]);
   const remaining = MAX_NOTE_BYTES - used;
   const overLimit = remaining < 0;
+
+  const ethereum = useMemo(() => {
+    if (typeof window === "undefined") return undefined;
+    return (window as any).ethereum as EthLike | undefined;
+  }, []);
 
   useEffect(() => {
     function readAccount() {
@@ -30,10 +53,38 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       }
     }
 
+    async function readChain() {
+      if (!ethereum) {
+        setChainId(null);
+        return;
+      }
+      try {
+        const v = await ethereum.request({ method: "eth_chainId" });
+        setChainId(parseChainId(v));
+      } catch {
+        setChainId(null);
+      }
+    }
+
     readAccount();
+    readChain();
+
     window.addEventListener("base_note_account_changed", readAccount);
+
+    if (ethereum?.on && ethereum?.removeListener) {
+      const onChainChanged = () => readChain();
+      ethereum.on("chainChanged", onChainChanged);
+      return () => {
+        window.removeEventListener("base_note_account_changed", readAccount);
+        ethereum.removeListener?.("chainChanged", onChainChanged);
+      };
+    }
+
     return () => window.removeEventListener("base_note_account_changed", readAccount);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const wrongNetwork = chainId !== null && chainId !== EXPECTED_CHAIN_ID;
 
   async function submit() {
     setError("");
@@ -41,6 +92,10 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
 
     if (!account) {
       setError("Connect wallet first");
+      return;
+    }
+    if (wrongNetwork) {
+      setError(`Wrong network. Switch to chainId ${EXPECTED_CHAIN_ID}`);
       return;
     }
     if (overLimit) {
@@ -65,7 +120,8 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
     }
   }
 
-  const disabled = status === "signing" || status === "mining" || overLimit || !account;
+  const disabled =
+    status === "signing" || status === "mining" || overLimit || !account || wrongNetwork;
 
   return (
     <section className="rounded-lg border p-4 space-y-3">
@@ -88,12 +144,26 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
         </span>
       </div>
 
+      {wrongNetwork ? (
+        <div className="text-xs text-amber-700 dark:text-amber-300">
+          Wrong network. Please switch to chainId {EXPECTED_CHAIN_ID}.
+        </div>
+      ) : null}
+
       <div className="flex items-center gap-3">
         <button
           onClick={submit}
           disabled={disabled}
           className="px-4 py-2 rounded-lg border hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
-          title={!account ? "Connect wallet first" : overLimit ? "Note too long" : ""}
+          title={
+            !account
+              ? "Connect wallet first"
+              : wrongNetwork
+              ? `Switch to chainId ${EXPECTED_CHAIN_ID}`
+              : overLimit
+              ? "Note too long"
+              : ""
+          }
         >
           {status === "idle" && "Save on-chain"}
           {status === "signing" && "Confirm in wallet..."}
