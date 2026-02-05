@@ -34,3 +34,37 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Base Note DApp
+
+A minimal full-stack example built on **Base**:
+
+- **Smart Contract**: `BaseNote`
+  - Stores a single on-chain note
+  - Emits `NoteUpdated` on every update
+  - Designed for simplicity and auditability
+
+- **Frontend (Next.js)**:
+  - Wallet connection via injected providers (e.g. MetaMask)
+  - Read/write note from/to the contract
+  - Live UI updates by listening to the `NoteUpdated` event (no polling)
+
+### Local Development
+
+```bash
+cd base-note-dapp
+npm install
+npm run dev
+Design Notes
+
+The frontend reacts to on-chain state changes using event listeners instead of manual refresh.
+Contract logic is intentionally minimal to keep behavior transparent and easy to audit.
+
+### Limitations & Security Notes
+
+- The contract stores only the latest note and keeps no history by design.
+- Note length is enforced in **bytes**, not characters.
+- Access control is intentionally omitted; any address may update the note.
+
+
+```
