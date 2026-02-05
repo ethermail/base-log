@@ -1,36 +1,44 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/// @title BaseNote
+uint256 public constant MAX_NOTE_LENGTH = 280;
+
 /// @notice Minimal on-chain note contract for Base builders.
 contract BaseNote {
-    /// @notice Maximum allowed note length (in bytes).
+    // ⬇️ ADD HERE (Commit 1)
     uint256 public constant MAX_NOTE_LENGTH = 280;
+    // ⬆️ END
 
-    /// @notice Latest note stored on-chain.
+    // ⬇️ ADD HERE (Commit 2)
+    error NoteTooLong();
+    // ⬆️ END
+
+    /// @notice Latest note stored on-chain
     string public note;
 
     /// @notice Emitted when the note is updated.
-    /// @param author The account that updated the note.
-    /// @param note The new note content.
-    event NoteUpdated(address indexed author, string note);
+    event NoteUpdated(address indexed by, string note);
 
     /// @notice Update the stored note and emit an event.
-    /// @dev Reverts if the note exceeds MAX_NOTE_LENGTH bytes.
-    /// @param n The new note content.
     function setNote(string calldata n) external {
-        require(bytes(n).length <= MAX_NOTE_LENGTH, "note too long");
+        // ⬇️ ADD HERE (Commit 3)
+        if (bytes(n).length > MAX_NOTE_LENGTH) revert NoteTooLong();
+        // ⬆️ END
+
         note = n;
         emit NoteUpdated(msg.sender, n);
     }
 
-    /// @notice Returns the length of the current note (in bytes).
+    // ⬇️ ADD HERE (Commit 5: view functions grouped)
+    /// @notice Returns the length of the current note
+    /// @return length The length of the note in bytes
     function noteLength() external view returns (uint256) {
         return bytes(note).length;
     }
 
-    /// @notice Returns true if no note is set.
+    /// @notice Returns true if no note is set
     function isEmpty() external view returns (bool) {
         return bytes(note).length == 0;
     }
+    // ⬆️ END
 }
