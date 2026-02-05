@@ -8,6 +8,7 @@ pragma solidity ^0.8.20;
 /// - Stores only the latest note
 /// - Optimized for simplicity and auditability
 /// - No access control, no history, no upgrade logic
+/// @custom:security-contact security@ethermail.xyz
 contract BaseNote {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
