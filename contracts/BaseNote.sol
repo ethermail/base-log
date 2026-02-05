@@ -9,6 +9,10 @@ pragma solidity ^0.8.20;
 /// - Optimized for simplicity and auditability
 /// - No access control, no history, no upgrade logic
 /// @custom:security-contact security@ethermail.xyz
+/// @custom:invariant
+/// - The stored note length is always <= MAX_NOTE_LENGTH
+/// - The contract stores at most one note at any time
+/// - Updating the note always emits a NoteUpdated event
 contract BaseNote {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
