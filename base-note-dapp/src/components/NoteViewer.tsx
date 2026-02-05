@@ -10,7 +10,7 @@ type NoteState = {
   error?: string;
 };
 
-export function NoteViewer() {
+export function NoteViewer({ refreshKey = 0 }: { refreshKey?: number }) {
   const [state, setState] = useState<NoteState>({
     note: "",
     length: 0,
@@ -30,16 +30,14 @@ export function NoteViewer() {
         setState({ note: "", length: 0, hasNote: false, error: e?.message ?? String(e) });
       }
     })();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <section className="rounded-lg border p-4 space-y-2">
       <h2 className="text-sm font-medium">On-chain note</h2>
 
       {state.error ? (
-        <p className="text-sm text-red-600 break-words">
-          {state.error}
-        </p>
+        <p className="text-sm text-red-600 break-words">{state.error}</p>
       ) : (
         <>
           <div className="text-sm text-zinc-600">
