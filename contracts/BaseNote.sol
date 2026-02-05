@@ -45,6 +45,10 @@ contract BaseNote {
                               WRITE FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Deploys the contract.
+    /// @dev Intentionally empty. This contract keeps no constructor-time state.
+    constructor() {}
+
     /// @notice Update the stored note.
     /// @dev Reverts if note length exceeds MAX_NOTE_LENGTH.
     /// @param newNote The new note content.
