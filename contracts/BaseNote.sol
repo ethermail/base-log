@@ -23,6 +23,11 @@ pragma solidity ^0.8.20;
 /// - Griefing is possible: arbitrary users can overwrite the stored note.
 /// - Event spoofing is not prevented: off-chain consumers must trust on-chain events only.
 /// - Denial-of-service via storage bloat is mitigated by MAX_NOTE_LENGTH.
+/// @custom:limitations
+/// - No access control: any address can overwrite the stored note.
+/// - No historical data: only the latest note is stored on-chain.
+/// - No input sanitization beyond length checks (content is arbitrary bytes).
+/// - No upgrade mechanism: changes require redeployment.
 contract BaseNote {
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
