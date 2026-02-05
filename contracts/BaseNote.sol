@@ -60,11 +60,6 @@ contract BaseNote {
                                VIEW FUNCTIONS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Returns the current note.
-    function getNote() external view returns (string memory) {
-        return note;
-    }
-
     /// @notice Returns the length of the current note.
     /// @return length The length of the note in bytes.
     function noteLength() external view returns (uint256 length) {
