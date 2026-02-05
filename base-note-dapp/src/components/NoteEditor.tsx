@@ -2,10 +2,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { getWriteContract } from "../lib/contract";
+import { getExpectedChainId } from "../lib/config";
 
 const MAX_NOTE_BYTES = 280;
 const LS_KEY = "base_note_account";
-const EXPECTED_CHAIN_ID = 84532; // Base Sepolia
 
 type EthLike = {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
@@ -28,6 +28,8 @@ function parseChainId(hexOrNum: unknown): number | null {
 }
 
 export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
+  const expectedChainId = getExpectedChainId();
+
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<"idle" | "signing" | "mining" | "done">("idle");
   const [txHash, setTxHash] = useState("");
@@ -84,7 +86,7 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const wrongNetwork = chainId !== null && chainId !== EXPECTED_CHAIN_ID;
+  const wrongNetwork = chainId !== null && chainId !== expectedChainId;
 
   async function submit() {
     setError("");
@@ -95,7 +97,7 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       return;
     }
     if (wrongNetwork) {
-      setError(`Wrong network. Switch to chainId ${EXPECTED_CHAIN_ID}`);
+      setError(`Wrong network. Switch to chainId ${expectedChainId}`);
       return;
     }
     if (overLimit) {
@@ -146,7 +148,7 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
 
       {wrongNetwork ? (
         <div className="text-xs text-amber-700 dark:text-amber-300">
-          Wrong network. Please switch to chainId {EXPECTED_CHAIN_ID}.
+          Wrong network. Please switch to chainId {expectedChainId}.
         </div>
       ) : null}
 
@@ -159,7 +161,7 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
             !account
               ? "Connect wallet first"
               : wrongNetwork
-              ? `Switch to chainId ${EXPECTED_CHAIN_ID}`
+              ? `Switch to chainId ${expectedChainId}`
               : overLimit
               ? "Note too long"
               : ""
