@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 type EthLike = {
-  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+  request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
   on?: (event: string, handler: (...args: any[]) => void) => void;
   removeListener?: (event: string, handler: (...args: any[]) => void) => void;
 };
@@ -14,7 +14,6 @@ const BASE_SEPOLIA = 84532;
 function parseChainId(hexOrNum: unknown): number | null {
   if (typeof hexOrNum === "number") return hexOrNum;
   if (typeof hexOrNum === "string") {
-    // MetaMask returns hex string like "0x14a34" or "0x2105"
     if (hexOrNum.startsWith("0x")) return parseInt(hexOrNum, 16);
     const n = Number(hexOrNum);
     return Number.isFinite(n) ? n : null;
@@ -28,11 +27,11 @@ function chainName(chainId: number) {
   return `Chain ${chainId}`;
 }
 
-export function NetworkBadge({
-  expectedChainId,
-}: {
-  expectedChainId?: number;
-}) {
+function toHexChainId(chainId: number) {
+  return "0x" + chainId.toString(16);
+}
+
+export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) {
   const ethereum = useMemo(() => {
     if (typeof window === "undefined") return undefined;
     return (window as any).ethereum as EthLike | undefined;
@@ -40,6 +39,7 @@ export function NetworkBadge({
 
   const [chainId, setChainId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
+  const [switching, setSwitching] = useState<boolean>(false);
 
   async function refresh() {
     setError("");
@@ -56,6 +56,75 @@ export function NetworkBadge({
     }
   }
 
+  async function switchToExpected() {
+    if (!ethereum || !expectedChainId) return;
+    setError("");
+    setSwitching(true);
+
+    const hex = toHexChainId(expectedChainId);
+
+    try {
+      // Try switch first
+      await ethereum.request({
+        method: "wallet_switchEthereumChain",
+        params: [{ chainId: hex }],
+      });
+      await refresh();
+    } catch (e: any) {
+      const msg = e?.message ?? String(e);
+      const code = e?.code;
+
+      // 4902: unknown chain -> try addEthereumChain
+      if (code === 4902 || msg.toLowerCase().includes("unrecognized chain")) {
+        try {
+          // Only provide add params for Base Sepolia/Mainnet (common case)
+          if (expectedChainId === BASE_SEPOLIA) {
+            await ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: toHexChainId(BASE_SEPOLIA),
+                  chainName: "Base Sepolia",
+                  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+                  rpcUrls: ["https://sepolia.base.org"],
+                  blockExplorerUrls: ["https://sepolia.basescan.org"],
+                },
+              ],
+            });
+          } else if (expectedChainId === BASE_MAINNET) {
+            await ethereum.request({
+              method: "wallet_addEthereumChain",
+              params: [
+                {
+                  chainId: toHexChainId(BASE_MAINNET),
+                  chainName: "Base",
+                  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
+                  rpcUrls: ["https://mainnet.base.org"],
+                  blockExplorerUrls: ["https://basescan.org"],
+                },
+              ],
+            });
+          } else {
+            throw new Error("Unknown chain: please add it in your wallet manually.");
+          }
+
+          // After adding, try switch again
+          await ethereum.request({
+            method: "wallet_switchEthereumChain",
+            params: [{ chainId: hex }],
+          });
+          await refresh();
+        } catch (e2: any) {
+          setError(e2?.message ?? String(e2));
+        }
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   useEffect(() => {
     refresh();
     if (!ethereum?.on || !ethereum?.removeListener) return;
@@ -69,9 +138,7 @@ export function NetworkBadge({
 
   if (error) {
     return (
-      <div className="rounded-lg border p-3 text-sm text-red-600 break-words">
-        {error}
-      </div>
+      <div className="rounded-lg border p-3 text-sm text-red-600 break-words">{error}</div>
     );
   }
 
@@ -85,9 +152,7 @@ export function NetworkBadge({
 
   if (chainId == null) {
     return (
-      <div className="rounded-lg border p-3 text-sm text-zinc-600">
-        Network: unknown
-      </div>
+      <div className="rounded-lg border p-3 text-sm text-zinc-600">Network: unknown</div>
     );
   }
 
@@ -100,11 +165,24 @@ export function NetworkBadge({
       }`}
       title={expectedChainId ? `Expected chainId: ${expectedChainId}` : ""}
     >
-      Network: <span className="font-medium">{chainName(chainId)}</span>{" "}
-      <span className="text-xs opacity-70">(chainId: {chainId})</span>
+      <div>
+        Network: <span className="font-medium">{chainName(chainId)}</span>{" "}
+        <span className="text-xs opacity-70">(chainId: {chainId})</span>
+      </div>
+
       {!ok ? (
-        <div className="mt-1 text-xs opacity-90">
-          Wrong network. Please switch to chainId {expectedChainId}.
+        <div className="mt-2 flex items-center gap-2">
+          <div className="text-xs opacity-90">
+            Wrong network. Please switch to chainId {expectedChainId}.
+          </div>
+          <button
+            onClick={switchToExpected}
+            disabled={switching}
+            className="ml-auto text-xs px-3 py-1 rounded-md border hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
+            title="Switch network in your wallet"
+          >
+            {switching ? "Switching..." : "Switch Network"}
+          </button>
         </div>
       ) : null}
     </div>
