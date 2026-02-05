@@ -3,6 +3,8 @@ pragma solidity ^0.8.20;
 
 uint256 public constant MAX_NOTE_LENGTH = 280;
 
+error NoteTooLong();
+
 /// @notice Minimal on-chain note contract for Base builders.
 contract BaseNote {
     // ⬇️ ADD HERE (Commit 1)
