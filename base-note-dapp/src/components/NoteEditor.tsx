@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { getWriteContract } from "../lib/contract";
 
-export function NoteEditor() {
+export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
   const [value, setValue] = useState("");
   const [status, setStatus] = useState<"idle" | "signing" | "mining" | "done">("idle");
   const [txHash, setTxHash] = useState("");
@@ -23,6 +23,7 @@ export function NoteEditor() {
 
       await tx.wait();
       setStatus("done");
+      onSaved?.();
     } catch (e: any) {
       setStatus("idle");
       setError(e?.message ?? String(e));
