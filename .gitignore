@@ -9,3 +9,5 @@ base-note-dapp/.env*
 # VS Code workspace files
 *.code-workspace
 .vscode/
+next
+base-note-dapp@0.1.0
