@@ -1,22 +1,47 @@
-import { Contract, BrowserProvider } from "ethers";
-import { BASE_NOTE_ABI } from "./abi";
+import { BrowserProvider, Contract } from "ethers";
+import abi from "./BaseNote.abi.json";
+import { getExpectedChainId } from "./config";
+import { getBaseNoteAddress } from "./addresses";
 
-export const BASE_NOTE_ADDRESS = process.env.NEXT_PUBLIC_BASE_NOTE_ADDRESS ?? "";
+type EthLike = {
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+};
 
-export async function getProvider() {
-  if (!window.ethereum) throw new Error("No wallet");
-  return new BrowserProvider(window.ethereum);
+function getEthereum(): EthLike {
+  if (typeof window === "undefined") {
+    throw new Error("window is undefined");
+  }
+  const eth = (window as any).ethereum as EthLike | undefined;
+  if (!eth) throw new Error("No injected wallet found");
+  return eth;
+}
+
+async function getChainId(eth: EthLike): Promise<number> {
+  const v = await eth.request({ method: "eth_chainId" });
+  if (typeof v === "string" && v.startsWith("0x")) return parseInt(v, 16);
+  if (typeof v === "number") return v;
+  throw new Error("Unable to read chainId");
 }
 
 export async function getReadContract() {
-  if (!BASE_NOTE_ADDRESS) throw new Error("Missing NEXT_PUBLIC_BASE_NOTE_ADDRESS");
-  const provider = await getProvider();
-  return new Contract(BASE_NOTE_ADDRESS, BASE_NOTE_ABI, provider);
+  const eth = getEthereum();
+  const provider = new BrowserProvider(eth as any);
+  const chainId = await getChainId(eth);
+  const address = getBaseNoteAddress(chainId);
+  return new Contract(address, abi, provider);
 }
 
 export async function getWriteContract() {
-  if (!BASE_NOTE_ADDRESS) throw new Error("Missing NEXT_PUBLIC_BASE_NOTE_ADDRESS");
-  const provider = await getProvider();
+  const eth = getEthereum();
+  const provider = new BrowserProvider(eth as any);
   const signer = await provider.getSigner();
-  return new Contract(BASE_NOTE_ADDRESS, BASE_NOTE_ABI, signer);
+  const chainId = await getChainId(eth);
+
+  const expected = getExpectedChainId();
+  if (chainId !== expected) {
+    throw new Error(`Wrong network: expected ${expected}, got ${chainId}`);
+  }
+
+  const address = getBaseNoteAddress(chainId);
+  return new Contract(address, abi, signer);
 }
