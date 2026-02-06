@@ -6,7 +6,7 @@ import { txUrl } from "../lib/explorer";
 
 const COPY_TOAST_MS = 1500;
 const EVENT_DEBOUNCE_MS = 300;
-const OPTIMISTIC_EVENT = OPTIMISTIC_EVENT;
+const OPTIMISTIC_EVENT = "base_note_optimistic";
 
 type NoteState = {
   note: string;
@@ -29,6 +29,7 @@ export function NoteViewer() {
 
   const [copied, setCopied] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
+
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const noteRef = useRef<HTMLDivElement | null>(null);
 
@@ -67,11 +68,12 @@ export function NoteViewer() {
     }
   }
 
+  // Init + chain + contract events
   useEffect(() => {
     let cleanup: (() => void) | null = null;
 
-    // Read chainId for explorer links
     const eth = (window as any).ethereum;
+
     async function readChain() {
       if (!eth?.request) return setChainId(null);
       try {
@@ -85,13 +87,13 @@ export function NoteViewer() {
         setChainId(null);
       }
     }
+
     readChain();
     eth?.on?.("chainChanged", readChain);
 
     (async () => {
       await load();
 
-      // 1) Subscribe on-chain event for real-time updates
       try {
         const c = await getReadContract();
 
@@ -103,24 +105,28 @@ export function NoteViewer() {
 
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
-            // Refresh on-chain source of truth after short debounce
             load();
             setState((s) => ({
               ...s,
               lastBlock: blockNumber,
               lastTx: txHash,
-              // If the chain update matches (or simply arrived), clear pending
               pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
             }));
+
+            requestAnimationFrame(() => {
+              noteRef.current?.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            });
           }, EVENT_DEBOUNCE_MS);
 
-          // Fast-path optimistic clear if event came from our pending tx
           setState((s) => ({
             ...s,
             note: noteFromEvent ?? s.note,
-            pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
             lastBlock: blockNumber,
             lastTx: txHash,
+            pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
           }));
         };
 
@@ -140,7 +146,7 @@ export function NoteViewer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2) Listen optimistic updates from NoteEditor
+  // Optimistic updates
   useEffect(() => {
     const onOptimistic = (ev: Event) => {
       const e = ev as CustomEvent<{ note: string; txHash?: string }>;
@@ -150,15 +156,18 @@ export function NoteViewer() {
       setState((s) => ({
         ...s,
         note,
-        length: note.length, // visual only; on-chain length may differ for non-ascii, but OK for optimistic UX
+        length: note.length,
         hasNote: note.length > 0,
         pendingTx: txHash ?? s.pendingTx ?? "pending",
       }));
-    };
 
-    requestAnimationFrame(() => {
-      noteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-    });
+      requestAnimationFrame(() => {
+        noteRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
+    };
 
     window.addEventListener(OPTIMISTIC_EVENT, onOptimistic as any);
     return () =>
@@ -192,7 +201,6 @@ export function NoteViewer() {
                     target="_blank"
                     rel="noreferrer"
                     className="px-2 py-0.5 rounded border text-xs hover:bg-black/5 dark:hover:bg-white/10"
-                    title="View pending transaction in explorer"
                   >
                     View
                   </a>
@@ -220,7 +228,6 @@ export function NoteViewer() {
                   type="button"
                   onClick={() => copy(state.lastTx!)}
                   className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
-                  title="Copy transaction hash"
                 >
                   Copy
                 </button>
@@ -247,14 +254,7 @@ export function NoteViewer() {
                           ? "opacity-50 cursor-not-allowed"
                           : "hover:bg-black/5 dark:hover:bg-white/10"
                       }`}
-                      title={
-                        disabled
-                          ? "No transaction hash available"
-                          : "Open transaction in explorer"
-                      }
-                      onClick={(e) => {
-                        if (disabled) e.preventDefault();
-                      }}
+                      onClick={(e) => disabled && e.preventDefault()}
                     >
                       Explorer
                     </a>
