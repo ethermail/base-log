@@ -120,17 +120,29 @@ const [state, setState] = useState<NoteState>({
           {state.lastBlock && state.lastTx ? (
             <div className="text-xs text-zinc-600 space-y-1">
               <div>Last update block: {state.lastBlock}</div>
-              <div className="break-all">
-                Tx:&nbsp;
-                <a
-                  href={`${explorerBase(84532)}/tx/${state.lastTx}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="underline"
-                >
-                  {state.lastTx}
-                </a>
-              </div>
+              <div className="flex items-center gap-2 text-xs break-all">
+  <span>Tx:</span>
+  <span className="font-mono">{state.lastTx}</span>
+
+  <button
+    type="button"
+    onClick={() => copy(state.lastTx!)}
+    className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+    title="Copy transaction hash"
+  >
+    Copy
+  </button>
+
+  <a
+    href={txUrl(84532, state.lastTx!)}
+    target="_blank"
+    rel="noreferrer"
+    className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+    title="Open transaction in explorer"
+  >
+    Explorer
+  </a>
+</div>
             </div>
           ) : null}
         </>
