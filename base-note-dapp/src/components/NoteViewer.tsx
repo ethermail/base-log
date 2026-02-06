@@ -26,6 +26,7 @@ export function NoteViewer() {
   const [copied, setCopied] = useState(false);
   const [chainId, setChainId] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const noteRef = useRef<HTMLDivElement | null>(null);
 
   async function load() {
     setState((s) => ({ ...s, loading: true, error: undefined }));
@@ -151,6 +152,10 @@ export function NoteViewer() {
       }));
     };
 
+    requestAnimationFrame(() => {
+      noteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+
     window.addEventListener("base_note_optimistic", onOptimistic as any);
     return () =>
       window.removeEventListener("base_note_optimistic", onOptimistic as any);
@@ -192,7 +197,10 @@ export function NoteViewer() {
             </div>
           ) : null}
 
-          <div className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3">
+          <div
+            ref={noteRef}
+            className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3"
+          >
             {state.hasNote ? state.note : "(no note yet)"}
           </div>
 
