@@ -122,7 +122,8 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       onSaved?.();
     } catch (e: any) {
       setStatus("idle");
-      setError(e?.message ?? String(e));
+        setError("Transaction failed. See details.");
+        setErrorDetails(e?.shortMessage ?? e?.message ?? String(e));
     }
   }
 
@@ -185,6 +186,12 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       </div>
 
       {error ? <p className="text-sm text-red-600 break-words">{error}</p> : null}
+      {errorDetails ? (
+        <details className="text-xs text-zinc-600">
+          <summary className="cursor-pointer">Details</summary>
+          <pre className="mt-2 whitespace-pre-wrap break-words">{errorDetails}</pre>
+        </details>
+      ) : null}
     </section>
   );
 }
