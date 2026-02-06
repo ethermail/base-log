@@ -1,5 +1,7 @@
 "use client";
 
+
+import { txUrl } from "../lib/explorer";
 import { useEffect, useRef, useState } from "react";
 import { getReadContract } from "../lib/contract";
 
@@ -19,7 +21,17 @@ function explorerBase(chainId: number) {
 }
 
 export function NoteViewer() {
-  const [state, setState] = useState<NoteState>({
+  
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
+    } catch {
+      prompt("Copy this:", text);
+    }
+  }
+
+const [state, setState] = useState<NoteState>({
     note: "",
     length: 0,
     hasNote: false,
