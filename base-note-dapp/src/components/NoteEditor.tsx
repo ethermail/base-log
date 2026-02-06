@@ -110,6 +110,9 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       const c = await getWriteContract();
       const tx = await c.setNote(value);
 
+
+      // Optimistic UI: update viewer immediately
+      window.dispatchEvent(new CustomEvent("base_note_optimistic", { detail: { note: value, txHash: tx.hash } }));
       setTxHash(tx.hash as string);
       setStatus("mining");
 

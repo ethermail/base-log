@@ -1,9 +1,8 @@
 "use client";
 
-import { txUrl } from "../lib/explorer";
 import { useEffect, useRef, useState } from "react";
 import { getReadContract } from "../lib/contract";
-import type { Contract } from "ethers";
+import { txUrl } from "../lib/explorer";
 
 type NoteState = {
   note: string;
@@ -11,25 +10,11 @@ type NoteState = {
   hasNote: boolean;
   lastBlock?: number;
   lastTx?: string;
+  pendingTx?: string;
   error?: string;
 };
 
-function explorerBase(chainId: number) {
-  if (chainId === 8453) return "https://basescan.org";
-  if (chainId === 84532) return "https://sepolia.basescan.org";
-  return "";
-}
-
 export function NoteViewer() {
-  async function copy(text: string) {
-    try {
-      await navigator.clipboard.writeText(text);
-      alert("Copied!");
-    } catch {
-      prompt("Copy this:", text);
-    }
-  }
-
   const [state, setState] = useState<NoteState>({
     note: "",
     length: 0,
@@ -45,14 +30,21 @@ export function NoteViewer() {
       const length = Number(await c.noteLength());
       const hasNote = (await c.hasNote()) as boolean;
 
-      setState((s) => ({ ...s, note, length, hasNote }));
+      setState((s) => ({ ...s, note, length, hasNote, error: undefined }));
     } catch (e: any) {
-      setState({
-        note: "",
-        length: 0,
-        hasNote: false,
+      setState((s) => ({
+        ...s,
         error: e?.message ?? String(e),
-      });
+      }));
+    }
+  }
+
+  async function copy(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      alert("Copied!");
+    } catch {
+      prompt("Copy this:", text);
     }
   }
 
@@ -62,57 +54,38 @@ export function NoteViewer() {
     (async () => {
       await load();
 
+      // 1) Subscribe on-chain event for real-time updates
       try {
         const c = await getReadContract();
-        const provider = c.runner?.provider;
-        const network = await provider?.getNetwork();
-        const chainId = Number(network?.chainId ?? 0);
 
         const onUpdated = (...args: any[]) => {
+          const noteFromEvent = args?.[1] as string | undefined;
           const event = args[args.length - 1];
           const blockNumber = event?.log?.blockNumber;
           const txHash = event?.log?.transactionHash;
 
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
+            // Refresh on-chain source of truth after short debounce
             load();
             setState((s) => ({
               ...s,
               lastBlock: blockNumber,
               lastTx: txHash,
+              // If the chain update matches (or simply arrived), clear pending
+              pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
             }));
           }, 300);
+
+          // Fast-path optimistic clear if event came from our pending tx
+          setState((s) => ({
+            ...s,
+            note: noteFromEvent ?? s.note,
+            pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
+            lastBlock: blockNumber,
+            lastTx: txHash,
+          }));
         };
-        useEffect(() => {
-          let contract: Contract | null = null;
-
-          async function subscribe() {
-            try {
-              const c = await getReadContract();
-              contract = c;
-
-              // 监听 NoteUpdated(address,string)
-              c.on("NoteUpdated", (by, note, event) => {
-                setState((prev) => ({
-                  ...prev,
-                  note,
-                  lastBlock: event.log.blockNumber,
-                  lastTx: event.log.transactionHash,
-                }));
-              });
-            } catch (err) {
-              console.error("Failed to subscribe NoteUpdated", err);
-            }
-          }
-
-          subscribe();
-
-          return () => {
-            if (contract) {
-              contract.removeAllListeners("NoteUpdated");
-            }
-          };
-        }, []);
 
         c.on("NoteUpdated", onUpdated);
 
@@ -129,6 +102,26 @@ export function NoteViewer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // 2) Listen optimistic updates from NoteEditor
+  useEffect(() => {
+    const onOptimistic = (ev: Event) => {
+      const e = ev as CustomEvent<{ note: string; txHash?: string }>;
+      const note = e.detail?.note ?? "";
+      const txHash = e.detail?.txHash;
+
+      setState((s) => ({
+        ...s,
+        note,
+        length: note.length, // visual only; on-chain length may differ for non-ascii, but OK for optimistic UX
+        hasNote: note.length > 0,
+        pendingTx: txHash ?? s.pendingTx ?? "pending",
+      }));
+    };
+
+    window.addEventListener("base_note_optimistic", onOptimistic as any);
+    return () => window.removeEventListener("base_note_optimistic", onOptimistic as any);
+  }, []);
+
   return (
     <section className="rounded-lg border p-4 space-y-2">
       <h2 className="text-sm font-medium">On-chain note (live)</h2>
@@ -138,9 +131,18 @@ export function NoteViewer() {
       ) : (
         <>
           <div className="text-sm text-zinc-600">
-            hasNote: <span className="font-mono">{String(state.hasNote)}</span>{" "}
-            • length: <span className="font-mono">{state.length}</span>
+            hasNote: <span className="font-mono">{String(state.hasNote)}</span> • length:{" "}
+            <span className="font-mono">{state.length}</span>
           </div>
+
+          {state.pendingTx ? (
+            <div className="text-xs text-amber-700 dark:text-amber-300">
+              Pending update…
+              {state.pendingTx.startsWith("0x") ? (
+                <span className="ml-2 font-mono break-all">{state.pendingTx}</span>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3">
             {state.note || "(empty)"}
@@ -149,6 +151,7 @@ export function NoteViewer() {
           {state.lastBlock && state.lastTx ? (
             <div className="text-xs text-zinc-600 space-y-1">
               <div>Last update block: {state.lastBlock}</div>
+
               <div className="flex items-center gap-2 text-xs break-all">
                 <span>Tx:</span>
                 <span className="font-mono">{state.lastTx}</span>
