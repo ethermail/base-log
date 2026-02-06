@@ -1,7 +1,7 @@
 export const ADDRESSES: Record<number, { BaseNote: `0x${string}` }> = {
-  // Base Sepolia
+  // Base Sepolia (testnet)
   84532: {
-    BaseNote: "0x0000000000000000000000000000000000000000",
+    BaseNote: "0xYOUR_SEPOLIA_BASENOTE_ADDRESS",
   },
   // Base Mainnet
   8453: {
@@ -11,7 +11,7 @@ export const ADDRESSES: Record<number, { BaseNote: `0x${string}` }> = {
 
 export function getBaseNoteAddress(chainId: number): `0x${string}` {
   const entry = ADDRESSES[chainId];
-  if (!entry?.BaseNote) {
+  if (!entry?.BaseNote || entry.BaseNote === "0x0000000000000000000000000000000000000000") {
     throw new Error(`BaseNote address not configured for chainId ${chainId}`);
   }
   return entry.BaseNote;
