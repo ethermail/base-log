@@ -22,6 +22,7 @@ export function NoteViewer() {
   });
 
   const [copied, setCopied] = useState(false);
+  const [chainId, setChainId] = useState<number | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load() {
@@ -52,6 +53,24 @@ export function NoteViewer() {
 
   useEffect(() => {
     let cleanup: (() => void) | null = null;
+
+    // Read chainId for explorer links
+    const eth = (window as any).ethereum;
+    async function readChain() {
+      if (!eth?.request) return setChainId(null);
+      try {
+        const v = await eth.request({ method: "eth_chainId" });
+        const id =
+          typeof v === "string" && v.startsWith("0x")
+            ? parseInt(v, 16)
+            : Number(v);
+        setChainId(Number.isFinite(id) ? id : null);
+      } catch {
+        setChainId(null);
+      }
+    }
+    readChain();
+    eth?.on?.("chainChanged", readChain);
 
     (async () => {
       await load();
@@ -92,6 +111,7 @@ export function NoteViewer() {
         c.on("NoteUpdated", onUpdated);
 
         cleanup = () => {
+          eth?.removeListener?.("chainChanged", readChain);
           if (timerRef.current) clearTimeout(timerRef.current);
           c.off("NoteUpdated", onUpdated);
         };
@@ -121,7 +141,8 @@ export function NoteViewer() {
     };
 
     window.addEventListener("base_note_optimistic", onOptimistic as any);
-    return () => window.removeEventListener("base_note_optimistic", onOptimistic as any);
+    return () =>
+      window.removeEventListener("base_note_optimistic", onOptimistic as any);
   }, []);
 
   return (
@@ -133,15 +154,17 @@ export function NoteViewer() {
       ) : (
         <>
           <div className="text-sm text-zinc-600">
-            hasNote: <span className="font-mono">{String(state.hasNote)}</span> • length:{" "}
-            <span className="font-mono">{state.length}</span>
+            hasNote: <span className="font-mono">{String(state.hasNote)}</span>{" "}
+            • length: <span className="font-mono">{state.length}</span>
           </div>
 
           {state.pendingTx ? (
             <div className="text-xs text-amber-700 dark:text-amber-300">
               Pending update…
               {state.pendingTx.startsWith("0x") ? (
-                <span className="ml-2 font-mono break-all">{state.pendingTx}</span>
+                <span className="ml-2 font-mono break-all">
+                  {state.pendingTx}
+                </span>
               ) : null}
             </div>
           ) : null}
@@ -167,10 +190,12 @@ export function NoteViewer() {
                   Copy
                 </button>
 
-                  {copied ? <span className="text-xs text-green-600">Copied ✓</span> : null}
+                {copied ? (
+                  <span className="text-xs text-green-600">Copied ✓</span>
+                ) : null}
 
-                  <a
-                    href={txUrl(84532, state.lastTx!)}
+                <a
+                  href={txUrl(chainId ?? 84532, state.lastTx!)}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
