@@ -117,7 +117,8 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       setStatus("mining");
 
       await tx.wait();
-      setStatus("done");
+        setValue("");
+        setStatus("done");
       onSaved?.();
     } catch (e: any) {
       setStatus("idle");
