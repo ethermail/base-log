@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { getReadContract } from "../lib/contract";
 import { txUrl } from "../lib/explorer";
 
+const COPY_TOAST_MS = 1500;
+const EVENT_DEBOUNCE_MS = 300;
+const OPTIMISTIC_EVENT = OPTIMISTIC_EVENT;
+
 type NoteState = {
   note: string;
   length: number;
@@ -57,7 +61,7 @@ export function NoteViewer() {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
+      setTimeout(() => setCopied(false), COPY_TOAST_MS);
     } catch {
       prompt("Copy this:", text);
     }
@@ -108,7 +112,7 @@ export function NoteViewer() {
               // If the chain update matches (or simply arrived), clear pending
               pendingTx: s.pendingTx === txHash ? undefined : s.pendingTx,
             }));
-          }, 300);
+          }, EVENT_DEBOUNCE_MS);
 
           // Fast-path optimistic clear if event came from our pending tx
           setState((s) => ({
@@ -156,9 +160,9 @@ export function NoteViewer() {
       noteRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
 
-    window.addEventListener("base_note_optimistic", onOptimistic as any);
+    window.addEventListener(OPTIMISTIC_EVENT, onOptimistic as any);
     return () =>
-      window.removeEventListener("base_note_optimistic", onOptimistic as any);
+      window.removeEventListener(OPTIMISTIC_EVENT, onOptimistic as any);
   }, []);
 
   return (
