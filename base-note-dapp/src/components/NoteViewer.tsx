@@ -172,12 +172,22 @@ export function NoteViewer() {
           </div>
 
           {state.pendingTx ? (
-            <div className="text-xs text-amber-700 dark:text-amber-300">
-              Pending update…
+            <div className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+              <div>Pending update…</div>
+
               {state.pendingTx.startsWith("0x") ? (
-                <span className="ml-2 font-mono break-all">
-                  {state.pendingTx}
-                </span>
+                <div className="flex items-center gap-2 break-all">
+                  <span className="font-mono">{state.pendingTx}</span>
+                  <a
+                    href={txUrl(chainId ?? 84532, state.pendingTx)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-2 py-0.5 rounded border text-xs hover:bg-black/5 dark:hover:bg-white/10"
+                    title="View pending transaction in explorer"
+                  >
+                    View
+                  </a>
+                </div>
               ) : null}
             </div>
           ) : null}
