@@ -7,8 +7,16 @@ type NoteState = {
   note: string;
   length: number;
   hasNote: boolean;
+  lastBlock?: number;
+  lastTx?: string;
   error?: string;
 };
+
+function explorerBase(chainId: number) {
+  if (chainId === 8453) return "https://basescan.org";
+  if (chainId === 84532) return "https://sepolia.basescan.org";
+  return "";
+}
 
 export function NoteViewer() {
   const [state, setState] = useState<NoteState>({
@@ -25,9 +33,15 @@ export function NoteViewer() {
       const note = (await c.note()) as string;
       const length = Number(await c.noteLength());
       const hasNote = (await c.hasNote()) as boolean;
-      setState({ note, length, hasNote });
+
+      setState((s) => ({ ...s, note, length, hasNote }));
     } catch (e: any) {
-      setState({ note: "", length: 0, hasNote: false, error: e?.message ?? String(e) });
+      setState({
+        note: "",
+        length: 0,
+        hasNote: false,
+        error: e?.message ?? String(e),
+      });
     }
   }
 
@@ -39,16 +53,26 @@ export function NoteViewer() {
 
       try {
         const c = await getReadContract();
+        const provider = c.runner?.provider;
+        const network = await provider?.getNetwork();
+        const chainId = Number(network?.chainId ?? 0);
 
-        const onUpdated = () => {
-          // debounce: collapse bursts of events into one refresh
+        const onUpdated = (...args: any[]) => {
+          const event = args[args.length - 1];
+          const blockNumber = event?.log?.blockNumber;
+          const txHash = event?.log?.transactionHash;
+
           if (timerRef.current) clearTimeout(timerRef.current);
           timerRef.current = setTimeout(() => {
             load();
+            setState((s) => ({
+              ...s,
+              lastBlock: blockNumber,
+              lastTx: txHash,
+            }));
           }, 300);
         };
 
-        // ethers v6 supports .on(eventName, listener)
         c.on("NoteUpdated", onUpdated);
 
         cleanup = () => {
@@ -56,13 +80,11 @@ export function NoteViewer() {
           c.off("NoteUpdated", onUpdated);
         };
       } catch {
-        // if address missing or no wallet, load() already sets error
+        // ignore
       }
     })();
 
-    return () => {
-      cleanup?.();
-    };
+    return () => cleanup?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -78,9 +100,27 @@ export function NoteViewer() {
             hasNote: <span className="font-mono">{String(state.hasNote)}</span> • length:{" "}
             <span className="font-mono">{state.length}</span>
           </div>
+
           <div className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3">
             {state.note || "(empty)"}
           </div>
+
+          {state.lastBlock && state.lastTx ? (
+            <div className="text-xs text-zinc-600 space-y-1">
+              <div>Last update block: {state.lastBlock}</div>
+              <div className="break-all">
+                Tx:&nbsp;
+                <a
+                  href={`${explorerBase(84532)}/tx/${state.lastTx}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline"
+                >
+                  {state.lastTx}
+                </a>
+              </div>
+            </div>
+          ) : null}
         </>
       )}
     </section>
