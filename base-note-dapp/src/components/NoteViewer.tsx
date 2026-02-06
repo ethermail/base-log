@@ -169,7 +169,8 @@ export function NoteViewer() {
 
                   {copied ? <span className="text-xs text-green-600">Copied ✓</span> : null}
 
-                  <a                   href={txUrl(84532, state.lastTx!)}
+                  <a
+                    href={txUrl(84532, state.lastTx!)}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
