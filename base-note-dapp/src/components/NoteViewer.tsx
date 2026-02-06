@@ -1,9 +1,9 @@
 "use client";
 
-
 import { txUrl } from "../lib/explorer";
 import { useEffect, useRef, useState } from "react";
 import { getReadContract } from "../lib/contract";
+import type { Contract } from "ethers";
 
 type NoteState = {
   note: string;
@@ -21,7 +21,6 @@ function explorerBase(chainId: number) {
 }
 
 export function NoteViewer() {
-  
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
@@ -31,7 +30,7 @@ export function NoteViewer() {
     }
   }
 
-const [state, setState] = useState<NoteState>({
+  const [state, setState] = useState<NoteState>({
     note: "",
     length: 0,
     hasNote: false,
@@ -84,6 +83,36 @@ const [state, setState] = useState<NoteState>({
             }));
           }, 300);
         };
+        useEffect(() => {
+          let contract: Contract | null = null;
+
+          async function subscribe() {
+            try {
+              const c = await getReadContract();
+              contract = c;
+
+              // 监听 NoteUpdated(address,string)
+              c.on("NoteUpdated", (by, note, event) => {
+                setState((prev) => ({
+                  ...prev,
+                  note,
+                  lastBlock: event.log.blockNumber,
+                  lastTx: event.log.transactionHash,
+                }));
+              });
+            } catch (err) {
+              console.error("Failed to subscribe NoteUpdated", err);
+            }
+          }
+
+          subscribe();
+
+          return () => {
+            if (contract) {
+              contract.removeAllListeners("NoteUpdated");
+            }
+          };
+        }, []);
 
         c.on("NoteUpdated", onUpdated);
 
@@ -109,8 +138,8 @@ const [state, setState] = useState<NoteState>({
       ) : (
         <>
           <div className="text-sm text-zinc-600">
-            hasNote: <span className="font-mono">{String(state.hasNote)}</span> • length:{" "}
-            <span className="font-mono">{state.length}</span>
+            hasNote: <span className="font-mono">{String(state.hasNote)}</span>{" "}
+            • length: <span className="font-mono">{state.length}</span>
           </div>
 
           <div className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3">
@@ -121,28 +150,28 @@ const [state, setState] = useState<NoteState>({
             <div className="text-xs text-zinc-600 space-y-1">
               <div>Last update block: {state.lastBlock}</div>
               <div className="flex items-center gap-2 text-xs break-all">
-  <span>Tx:</span>
-  <span className="font-mono">{state.lastTx}</span>
+                <span>Tx:</span>
+                <span className="font-mono">{state.lastTx}</span>
 
-  <button
-    type="button"
-    onClick={() => copy(state.lastTx!)}
-    className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
-    title="Copy transaction hash"
-  >
-    Copy
-  </button>
+                <button
+                  type="button"
+                  onClick={() => copy(state.lastTx!)}
+                  className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+                  title="Copy transaction hash"
+                >
+                  Copy
+                </button>
 
-  <a
-    href={txUrl(84532, state.lastTx!)}
-    target="_blank"
-    rel="noreferrer"
-    className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
-    title="Open transaction in explorer"
-  >
-    Explorer
-  </a>
-</div>
+                <a
+                  href={txUrl(84532, state.lastTx!)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+                  title="Open transaction in explorer"
+                >
+                  Explorer
+                </a>
+              </div>
             </div>
           ) : null}
         </>
