@@ -21,6 +21,7 @@ export function NoteViewer() {
     hasNote: false,
   });
 
+  const [copied, setCopied] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load() {
@@ -42,7 +43,8 @@ export function NoteViewer() {
   async function copy(text: string) {
     try {
       await navigator.clipboard.writeText(text);
-      alert("Copied!");
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
     } catch {
       prompt("Copy this:", text);
     }
@@ -165,8 +167,9 @@ export function NoteViewer() {
                   Copy
                 </button>
 
-                <a
-                  href={txUrl(84532, state.lastTx!)}
+                  {copied ? <span className="text-xs text-green-600">Copied ✓</span> : null}
+
+                  <a                   href={txUrl(84532, state.lastTx!)}
                   target="_blank"
                   rel="noreferrer"
                   className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
