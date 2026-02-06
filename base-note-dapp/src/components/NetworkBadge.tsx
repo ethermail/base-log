@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { getBaseNoteAddress } from "../lib/addresses";
 
 type EthLike = {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<unknown>;
@@ -27,8 +28,10 @@ function chainName(chainId: number) {
   return `Chain ${chainId}`;
 }
 
-function toHexChainId(chainId: number) {
-  return "0x" + chainId.toString(16);
+function explorerBase(chainId: number) {
+  if (chainId === BASE_MAINNET) return "https://basescan.org";
+  if (chainId === BASE_SEPOLIA) return "https://sepolia.basescan.org";
+  return "";
 }
 
 export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) {
@@ -39,7 +42,7 @@ export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) 
 
   const [chainId, setChainId] = useState<number | null>(null);
   const [error, setError] = useState<string>("");
-  const [switching, setSwitching] = useState<boolean>(false);
+  const [copied, setCopied] = useState<boolean>(false);
 
   async function refresh() {
     setError("");
@@ -56,75 +59,6 @@ export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) 
     }
   }
 
-  async function switchToExpected() {
-    if (!ethereum || !expectedChainId) return;
-    setError("");
-    setSwitching(true);
-
-    const hex = toHexChainId(expectedChainId);
-
-    try {
-      // Try switch first
-      await ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: hex }],
-      });
-      await refresh();
-    } catch (e: any) {
-      const msg = e?.message ?? String(e);
-      const code = e?.code;
-
-      // 4902: unknown chain -> try addEthereumChain
-      if (code === 4902 || msg.toLowerCase().includes("unrecognized chain")) {
-        try {
-          // Only provide add params for Base Sepolia/Mainnet (common case)
-          if (expectedChainId === BASE_SEPOLIA) {
-            await ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [
-                {
-                  chainId: toHexChainId(BASE_SEPOLIA),
-                  chainName: "Base Sepolia",
-                  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-                  rpcUrls: ["https://sepolia.base.org"],
-                  blockExplorerUrls: ["https://sepolia.basescan.org"],
-                },
-              ],
-            });
-          } else if (expectedChainId === BASE_MAINNET) {
-            await ethereum.request({
-              method: "wallet_addEthereumChain",
-              params: [
-                {
-                  chainId: toHexChainId(BASE_MAINNET),
-                  chainName: "Base",
-                  nativeCurrency: { name: "ETH", symbol: "ETH", decimals: 18 },
-                  rpcUrls: ["https://mainnet.base.org"],
-                  blockExplorerUrls: ["https://basescan.org"],
-                },
-              ],
-            });
-          } else {
-            throw new Error("Unknown chain: please add it in your wallet manually.");
-          }
-
-          // After adding, try switch again
-          await ethereum.request({
-            method: "wallet_switchEthereumChain",
-            params: [{ chainId: hex }],
-          });
-          await refresh();
-        } catch (e2: any) {
-          setError(e2?.message ?? String(e2));
-        }
-      } else {
-        setError(msg);
-      }
-    } finally {
-      setSwitching(false);
-    }
-  }
-
   useEffect(() => {
     refresh();
     if (!ethereum?.on || !ethereum?.removeListener) return;
@@ -138,7 +72,9 @@ export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) 
 
   if (error) {
     return (
-      <div className="rounded-lg border p-3 text-sm text-red-600 break-words">{error}</div>
+      <div className="rounded-lg border p-3 text-sm text-red-600 break-words">
+        {error}
+      </div>
     );
   }
 
@@ -152,37 +88,77 @@ export function NetworkBadge({ expectedChainId }: { expectedChainId?: number }) 
 
   if (chainId == null) {
     return (
-      <div className="rounded-lg border p-3 text-sm text-zinc-600">Network: unknown</div>
+      <div className="rounded-lg border p-3 text-sm text-zinc-600">
+        Network: unknown
+      </div>
     );
   }
 
   const ok = expectedChainId ? chainId === expectedChainId : true;
+
+  let address: string | null = null;
+  try {
+    address = getBaseNoteAddress(chainId);
+  } catch {
+    address = null;
+  }
+
+  const explorer = explorerBase(chainId);
+  const addressUrl = explorer && address ? `${explorer}/address/${address}` : "";
+
+  async function copyAddress() {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      // ignore
+    }
+  }
 
   return (
     <div
       className={`rounded-lg border p-3 text-sm ${
         ok ? "text-zinc-700 dark:text-zinc-200" : "text-amber-700 dark:text-amber-300"
       }`}
-      title={expectedChainId ? `Expected chainId: ${expectedChainId}` : ""}
     >
       <div>
         Network: <span className="font-medium">{chainName(chainId)}</span>{" "}
         <span className="text-xs opacity-70">(chainId: {chainId})</span>
       </div>
 
-      {!ok ? (
-        <div className="mt-2 flex items-center gap-2">
-          <div className="text-xs opacity-90">
-            Wrong network. Please switch to chainId {expectedChainId}.
-          </div>
+      {address ? (
+        <div className="mt-2 flex items-center gap-2 text-xs">
+          <span className="font-mono truncate">{address}</span>
           <button
-            onClick={switchToExpected}
-            disabled={switching}
-            className="ml-auto text-xs px-3 py-1 rounded-md border hover:bg-black/5 disabled:opacity-50 dark:hover:bg-white/10"
-            title="Switch network in your wallet"
+            onClick={copyAddress}
+            className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+            title="Copy contract address"
           >
-            {switching ? "Switching..." : "Switch Network"}
+            {copied ? "Copied" : "Copy"}
           </button>
+          {addressUrl ? (
+            <a
+              href={addressUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
+              title="Open in block explorer"
+            >
+              Explorer
+            </a>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-2 text-xs opacity-70">
+          Contract address not configured for this network.
+        </div>
+      )}
+
+      {!ok ? (
+        <div className="mt-2 text-xs opacity-90">
+          Wrong network. Please switch to chainId {expectedChainId}.
         </div>
       ) : null}
     </div>
