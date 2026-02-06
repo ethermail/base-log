@@ -1,7 +1,7 @@
 export const ADDRESSES: Record<number, { BaseNote: `0x${string}` }> = {
   // Base Sepolia (testnet)
   84532: {
-    BaseNote: "0x8216045318640cFcF2613cc12680fb482B3E92f4",
+    BaseNote: "0x160B9E34EBdADB9f4Ecb38ceDd510FCd60dCbDDc",
   },
   // Base Mainnet
   8453: {
