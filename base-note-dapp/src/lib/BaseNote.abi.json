@@ -1,0 +1,7 @@
+[
+  "function note() view returns (string)",
+  "function setNote(string newNote)",
+  "function noteLength() view returns (uint256)",
+  "function hasNote() view returns (bool)",
+  "event NoteUpdated(address indexed by, string note)"
+]
