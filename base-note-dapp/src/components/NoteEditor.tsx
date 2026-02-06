@@ -34,6 +34,7 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
   const [status, setStatus] = useState<"idle" | "signing" | "mining" | "done">("idle");
   const [txHash, setTxHash] = useState("");
   const [error, setError] = useState("");
+  const [errorDetails, setErrorDetails] = useState("");
   const [account, setAccount] = useState("");
   const [chainId, setChainId] = useState<number | null>(null);
 
@@ -117,8 +118,8 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       setStatus("mining");
 
       await tx.wait();
-        setValue("");
-        setStatus("done");
+      setValue("");
+      setStatus("done");
       onSaved?.();
     } catch (e: any) {
       setStatus("idle");
