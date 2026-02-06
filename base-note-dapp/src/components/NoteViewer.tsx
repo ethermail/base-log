@@ -8,6 +8,7 @@ type NoteState = {
   note: string;
   length: number;
   hasNote: boolean;
+  loading: boolean;
   lastBlock?: number;
   lastTx?: string;
   pendingTx?: string;
@@ -19,6 +20,7 @@ export function NoteViewer() {
     note: "",
     length: 0,
     hasNote: false,
+    loading: true,
   });
 
   const [copied, setCopied] = useState(false);
@@ -26,16 +28,25 @@ export function NoteViewer() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load() {
+    setState((s) => ({ ...s, loading: true, error: undefined }));
     try {
       const c = await getReadContract();
       const note = (await c.note()) as string;
       const length = Number(await c.noteLength());
       const hasNote = (await c.hasNote()) as boolean;
 
-      setState((s) => ({ ...s, note, length, hasNote, error: undefined }));
+      setState((s) => ({
+        ...s,
+        note,
+        length,
+        hasNote,
+        loading: false,
+        error: undefined,
+      }));
     } catch (e: any) {
       setState((s) => ({
         ...s,
+        loading: false,
         error: e?.message ?? String(e),
       }));
     }
@@ -149,7 +160,9 @@ export function NoteViewer() {
     <section className="rounded-lg border p-4 space-y-2">
       <h2 className="text-sm font-medium">On-chain note (live)</h2>
 
-      {state.error ? (
+      {state.loading ? (
+        <div className="text-sm text-zinc-500">Loading note from chain…</div>
+      ) : state.error ? (
         <p className="text-sm text-red-600 break-words">{state.error}</p>
       ) : (
         <>
@@ -170,7 +183,7 @@ export function NoteViewer() {
           ) : null}
 
           <div className="whitespace-pre-wrap rounded-md bg-zinc-50 dark:bg-zinc-900 p-3">
-            {state.note || "(empty)"}
+            {state.hasNote ? state.note : "(no note yet)"}
           </div>
 
           {state.lastBlock && state.lastTx ? (
