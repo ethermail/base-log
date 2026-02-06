@@ -120,9 +120,10 @@ export function NoteEditor({ onSaved }: { onSaved?: () => void }) {
       await tx.wait();
       setValue("");
       setStatus("done");
+      setTimeout(() => setStatus("idle"), 1500);
       onSaved?.();
     } catch (e: any) {
-      setStatus("idle");
+        setStatus("idle");
         setError("Transaction failed. See details.");
         setErrorDetails(e?.shortMessage ?? e?.message ?? String(e));
     }
