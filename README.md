@@ -76,3 +76,10 @@ This project intentionally keeps the contract minimal. The security posture is d
 - No historical data: only the latest note is stored on-chain
 - No input sanitization beyond length checks (content is arbitrary bytes)
 - No upgrade mechanism: changes require redeployment
+
+### Supported Networks
+
+- **Base Sepolia (84532)** — deployed and supported
+- **Base Mainnet (8453)** — address placeholder, not deployed yet
+
+The frontend automatically selects the correct contract address based on `chainId`.
