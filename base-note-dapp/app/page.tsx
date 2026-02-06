@@ -1,6 +1,7 @@
 "use client";
 
 import { ConnectWallet } from "../src/components/ConnectWallet";
+import { ContractLinks } from "../src/components/ContractLinks";
 import { NetworkBadge } from "../src/components/NetworkBadge";
 import { NoteViewer } from "../src/components/NoteViewer";
 import { NoteEditor } from "../src/components/NoteEditor";
@@ -16,7 +17,9 @@ export default function Page() {
 
       <ErrorBoundary>
         <NetworkBadge expectedChainId={expectedChainId} />
-      </ErrorBoundary>
+      
+        <ContractLinks chainId={expectedChainId} />
+</ErrorBoundary>
 
       <h1 className="text-xl font-semibold">Base Note DApp</h1>
 
