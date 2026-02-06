@@ -207,15 +207,37 @@ export function NoteViewer() {
                   <span className="text-xs text-green-600">Copied ✓</span>
                 ) : null}
 
-                <a
-                  href={txUrl(chainId ?? 84532, state.lastTx!)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-2 py-1 rounded border hover:bg-black/5 dark:hover:bg-white/10"
-                  title="Open transaction in explorer"
-                >
-                  Explorer
-                </a>
+                {(() => {
+                  const tx =
+                    state.pendingTx && state.pendingTx.startsWith("0x")
+                      ? state.pendingTx
+                      : state.lastTx;
+
+                  const disabled = !tx;
+
+                  return (
+                    <a
+                      href={disabled ? undefined : txUrl(chainId ?? 84532, tx!)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`px-2 py-1 rounded border ${
+                        disabled
+                          ? "opacity-50 cursor-not-allowed"
+                          : "hover:bg-black/5 dark:hover:bg-white/10"
+                      }`}
+                      title={
+                        disabled
+                          ? "No transaction hash available"
+                          : "Open transaction in explorer"
+                      }
+                      onClick={(e) => {
+                        if (disabled) e.preventDefault();
+                      }}
+                    >
+                      Explorer
+                    </a>
+                  );
+                })()}
               </div>
             </div>
           ) : null}
